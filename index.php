@@ -76,4 +76,5 @@ $counter = 1;
         </form>
     </div>
 </body>
+
 </html>
