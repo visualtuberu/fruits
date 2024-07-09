@@ -64,15 +64,31 @@ $counter = 1;
         </table>
         <hr>
         <form action="core/add.php" method="post">
-            <input type="text" name="title" placeholder="Наименование" required>
-            <select name="unit" id="unit">
-                <option value="Кг">Кг</option>
-                <option value="Шт">Шт</option>
-            </select>
-            <input type="number" name="count" min="0" placeholder="Количество" required>
-
-            <input type="number" name="price" min="0" placeholder="Цена" required>
-            <button type="submit" class="btn btn-success">добавить</button>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Наименование</th>
+                        <th>Единицы измерения</th>
+                        <th>Количество</th>
+                        <th>Цена</th>
+                        <th>Добавить</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" name="title" placeholder="Наименование" required></td>
+                        <td>
+                            <select name="unit" id="unit">
+                                <option value="Кг">Кг</option>
+                                <option value="Шт">Шт</option>
+                            </select>
+                        </td>
+                        <td><input type="number" name="count" min="0" placeholder="Количество" required></td>
+                        <td><input type="number" name="price" min="0" placeholder="Цена" required></td>
+                        <td><button type="submit" class="btn btn-success">добавить</button></td>
+                    </tr>
+                </tbody>
+            </table>
         </form>
     </div>
 </body>
