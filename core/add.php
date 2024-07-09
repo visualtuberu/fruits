@@ -7,5 +7,11 @@ $count = $_POST['count'];
 $price = $_POST['price'];
 
 
-$q = $db->query("INSERT INTO `fruits` (`title`, `unit`, `count`, `price` ) VALUES ('$title', '$unit', '$count', '$price')");
-header('Location: /test_loc/index.php');
+$q = $db->prepare("INSERT INTO `fruits` (`title`, `unit`, `count`, `price` ) VALUES (:title, :unit, :count, :price)");
+$q->execute([
+    ':title' => $title,
+    ':unit' => $unit,
+    ':count' => $count,
+    ':price' => $price
+]);
+header('Location: ../index.php');
