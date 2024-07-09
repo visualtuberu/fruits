@@ -1,0 +1,16 @@
+{
+    "name": "ivan/test_loc",
+    "autoload": {
+        "psr-4": {
+            "Ivan\\TestLoc\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ivan"
+        }
+    ],
+    "require": {
+        "larapack/dd": "^1.1"
+    }
+}
