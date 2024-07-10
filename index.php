@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . "/vendor/autoload.php";
-require_once __DIR__ . "/vendor/larapack/dd/src/helper.php";
+require_once  "vendor/autoload.php";
+require_once  "vendor/larapack/dd/src/helper.php";
 
 try {
     $db = new PDO("sqlite:db/database.sqlite3");
@@ -8,6 +8,23 @@ try {
     echo $e->getMessage();
     echo 'Ошибка подключения к базе данных';
 }
+
+$pageCounter = 1;
+$rowsAmount = 5;
+if(isset($_GET['page'])) {
+    $pageCounter = $_GET['page'];
+}
+$offset = $pageCounter * $rowsAmount - $rowsAmount;
+
+$pageAmount = 0;
+
+$sql = "SELECT COUNT(*) as 'amount' FROM `fruits` ";
+$data = $db->query($sql)->fetch(PDO::FETCH_ASSOC);
+
+if (!empty($data['amount'])) {
+    $pageAmount = ceil($data['amount'] / $rowsAmount);
+}
+
 $isFilter = 0;
 
 if(isset($_GET['isFilter'])) {
@@ -15,31 +32,11 @@ if(isset($_GET['isFilter'])) {
     var_dump($_GET['isFilter']);
 }
 // Сброс фильтра
-if ($_GET['reset'] == 1) {
+if (isset($_GET['reset']) && $_GET['reset'] == 1) {
     $isFilter = 0;
     $_GET['isFilter'] = NULL;
 }
 
-if($_SERVER['offset'] != 0){
-    $offset = $_SERVER['offset'];
-} else{
-    $offset = 0;
-}
-//$forward = 0;
-//$back = 0;
-
-if($_GET["forward"] == 1){
-       $_SERVER['offset'] = $offset + 5;
-       $offset = $_SERVER['offset'];
-       $_GET['forward'] = NULL;
-       echo 'offset ' . $offset;
-}
-if($_GET["back"] == 1){
-    $_SERVER['offset'] = $offset - 5;
-    $offset = $_SERVER['offset'];
-    $_GET['back'] = NULL;
-    echo $offset;
-}
 
 $filterQuery = $db->query("SELECT MAX(price), MIN(price), MAX(count), MIN(count) FROM `fruits` LIMIT 5 ");
 $filteredData = $filterQuery->fetch(PDO::FETCH_ASSOC);
@@ -47,10 +44,10 @@ $filteredData = $filterQuery->fetch(PDO::FETCH_ASSOC);
 ["MAX(price)" => $maxPrice, "MIN(price)" => $minPrice, "MAX(count)"=> $maxCount, "MIN(count)"=> $minCount] = $filteredData;
 
 if (!$isFilter) {
-
-    $sql = "SELECT * FROM `fruits` LIMIT 5 OFFSET $offset";
+    $sql = "SELECT * FROM `fruits` LIMIT $rowsAmount OFFSET $offset";
+    var_dump($offset);
+    var_dump($sql);
     $data = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-
 }
 
 if ($isFilter) {
@@ -72,9 +69,6 @@ if ($isFilter) {
 
 }
 
-
-
-
 $counter = 1;
 ?>
 <!doctype html>
@@ -94,14 +88,16 @@ $counter = 1;
     <div class="container">
 
     <form action="index.php" method="get">
-        <label for="priceMin">Цена от</label>
+        <label for="minPrice">Цена от</label>
         <input type="number" name="minPrice" min="0" placeholder="Цена от" id="minPrice" value="<?= $minPrice ?>">
-        <label for="priceMax">Цена до</label>
+        <label for="maxPrice">Цена до</label>
         <input type="number" name="maxPrice" min="0" placeholder="Цена до" id="maxPrice" value="<?= $maxPrice ?>">
         <br>
-        <label for="countMin">Количество от</label>
+
+        <label for="minCount">Количество от</label>
         <input type="number" name="minCount" min="0" placeholder="Количество от" id="minCount" value="<?= $minCount ?>">
-        <label for="countMax">Количество до</label>
+
+        <label for="maxCount">Количество до</label>
         <input type="number" name="maxCount" min="0" placeholder="Количество до" id="maxCount" value="<?= $maxCount ?>">
         <br> <br>
         <input type="hidden" name="isFilter" value="<?= $isFilter ?>">
@@ -123,10 +119,7 @@ $counter = 1;
                 <th>Цена</th>
             </tr>
 
-            <?php
-
-            foreach ($data as $d) {
-            ?>
+            <?php foreach ($data as $d) : ?>
             <tr>
                 <td><?= $counter++ ?></td>
                 <td><?= $d['title'] ?></td>
@@ -145,23 +138,23 @@ $counter = 1;
                         <button type="submit" class="btn btn-warning">изменить</button>
                     </form>
                 </td>
-
             </tr>
-
-
-            <?php
-            }
-            ?>
+            <?php endforeach; ?>
         </table>
         <div class="control" >
             <form class="control-form" action="index.php" method="get">
-                <input type="hidden" name="back" value="1">
-                <button>Назад</button>
+                <?php if ($pageCounter > 1) : ?>
+                    <input type="hidden" name="page" value="<?= $pageCounter - 1 ?>">
+                    <button>Назад</button>
+                <?php endif; ?>
             </form>
             <form class="control-form" action="index.php" method="get">
-                <input type="hidden" name="forward" value="1">
-                <button>Вперед</button>
+                <?php if ($pageCounter < $pageAmount) : ?>
+                    <input type="hidden" name="page" value="<?= $pageCounter +1; ?>">
+                    <button>Вперед</button>
+                <?php endif; ?>
             </form>
+
         </div>
         <hr>
         <form action="core/add.php" method="post" >
