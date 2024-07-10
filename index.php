@@ -76,8 +76,6 @@ if ($isFilter) {
 
 
 $counter = 1;
-
-
 ?>
 <!doctype html>
 <html lang="en">
@@ -93,7 +91,7 @@ $counter = 1;
     <title>Document</title>
 </head>
 <body>
-<div class="container">
+    <div class="container">
 
     <form action="index.php" method="get">
         <label for="priceMin">Цена от</label>
