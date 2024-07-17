@@ -89,7 +89,7 @@ if (isset($_SESSION['isFilter']) && $_SESSION['isFilter']) {
 }
 
 if ($pageCounter > 1) {
-    $counter = $pageCounter * $offset - $offset;
+    $counter = $offset;
 } else {
     $counter = 1;
 }
