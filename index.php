@@ -108,7 +108,6 @@ if ($pageCounter > 1) {
     $counter = 1;
 }
 
-
 ?>
 <!doctype html>
 <html lang="en">
