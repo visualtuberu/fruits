@@ -45,7 +45,21 @@ if (isset($_GET['reset']) && $_GET['reset'] == 1) {
     $_GET['isFilter']  = 0;
     unset($_SESSION['filterArr']);
 }
+//$forward = 0;
+//$back = 0;
 
+if($_GET["forward"] == 1){
+       $_SERVER['offset'] = $offset + 5;
+       $offset = $_SERVER['offset'];
+       $_GET['forward'] = NULL;
+       echo 'offset ' . $offset;
+}
+if($_GET["back"] == 1){
+    $_SERVER['offset'] = $offset - 5;
+    $offset = $_SERVER['offset'];
+    $_GET['back'] = NULL;
+    echo $offset;
+}
 
 $filterQuery = $db->query("SELECT MAX(price), MIN(price), MAX(count), MIN(count) FROM `fruits` LIMIT 5 ");
 $filteredData = $filterQuery->fetch(PDO::FETCH_ASSOC);
