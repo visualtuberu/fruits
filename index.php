@@ -1,6 +1,7 @@
 <?php
-require_once __DIR__ . "/vendor/autoload.php";
-require_once __DIR__ . "/vendor/larapack/dd/src/helper.php";
+require_once  "vendor/autoload.php";
+require_once  "vendor/larapack/dd/src/helper.php";
+session_start();
 
 try {
     $db = new PDO("sqlite:db/database.sqlite3");
@@ -8,22 +9,41 @@ try {
     echo $e->getMessage();
     echo 'Ошибка подключения к базе данных';
 }
-$isFilter = 0;
 
-if(isset($_GET['isFilter'])) {
-    $isFilter = 1;
-    var_dump($_GET['isFilter']);
+$pageCounter = 1;
+$rowsAmount = 5;
+if(isset($_GET['page'])) {
+    $pageCounter = $_GET['page'];
+}
+$offset = $pageCounter * $rowsAmount - $rowsAmount;
+
+$pageAmount = 0;
+
+$sql = "SELECT COUNT(*) as 'amount' FROM `fruits` ";
+$data = $db->query($sql)->fetch(PDO::FETCH_ASSOC);
+
+if (!empty($data['amount'])) {
+    $pageAmount = ceil($data['amount'] / $rowsAmount);
+}
+
+
+if(isset($_GET['isFilter']) and $_GET['isFilter'] == 1) {
+
+    $_SESSION['isFilter'] = 1;
+    $filterArr = [
+        'minPrice' => $_GET['minPrice'],
+        'maxPrice' => $_GET['maxPrice'],
+        'minCount' => $_GET['minCount'],
+        'maxCount' => $_GET['maxCount']
+    ];
+    $_SESSION['filterArr'] = $filterArr;
+
 }
 // Сброс фильтра
-if ($_GET['reset'] == 1) {
-    $isFilter = 0;
-    $_GET['isFilter'] = NULL;
-}
-
-if($_SERVER['offset'] != 0){
-    $offset = $_SERVER['offset'];
-} else{
-    $offset = 0;
+if (isset($_GET['reset']) && $_GET['reset'] == 1) {
+    $_SESSION['isFilter'] = 0;
+    $_GET['isFilter']  = 0;
+    unset($_SESSION['filterArr']);
 }
 //$forward = 0;
 //$back = 0;
@@ -46,36 +66,49 @@ $filteredData = $filterQuery->fetch(PDO::FETCH_ASSOC);
 
 ["MAX(price)" => $maxPrice, "MIN(price)" => $minPrice, "MAX(count)"=> $maxCount, "MIN(count)"=> $minCount] = $filteredData;
 
-if (!$isFilter) {
-
-    $sql = "SELECT * FROM `fruits` LIMIT 5 OFFSET $offset";
+if (!isset($_SESSION['isFilter']) || $_SESSION['isFilter'] == 0) {
+    $sql = "SELECT * FROM `fruits` LIMIT $rowsAmount OFFSET $offset";
     $data = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
+
 }
 
-if ($isFilter) {
-    $sql = "SELECT * FROM `fruits`  WHERE price >= :minPrice and price <= :maxPrice and count >= :minCount and count <= :maxCount LIMIT 5 ";
+
+if (isset($_SESSION['isFilter']) && $_SESSION['isFilter']) {
+
+    $sql = "SELECT COUNT(*) as 'amount' FROM `fruits`  WHERE price >= :minPrice and price <= :maxPrice and count >= :minCount and count <= :maxCount ";
     $q = $db->prepare($sql);
-    $q->execute([
-        'minPrice' => $_GET['minPrice'],
-        'maxPrice' => $_GET['maxPrice'],
-        'minCount' => $_GET['minCount'],
-        'maxCount' => $_GET['maxCount']
-    ]);
+    $q->execute($_SESSION['filterArr']);
+    $data = $q->fetch(PDO::FETCH_ASSOC);
+
+
+    if (!empty($data['amount'])) {
+        $pageAmount = ceil($data['amount'] / $rowsAmount);
+    }
+
+
+    $sql = "SELECT * FROM `fruits`  WHERE price >= :minPrice and price <= :maxPrice and count >= :minCount and count <= :maxCount LIMIT $rowsAmount OFFSET $offset ";
+    $q = $db->prepare($sql);
+    $q->execute($_SESSION['filterArr']);
     $data = $q->fetchAll(PDO::FETCH_ASSOC);
 
+
+
     // Обновляем данные в инпутах фильтра
-    $minPrice = $_GET['minPrice'];
-    $maxPrice = $_GET['maxPrice'];
-    $minCount = $_GET['minCount'];
-    $maxCount = $_GET['maxCount'];
+    $minPrice = $_SESSION['filterArr']['minPrice'];
+    $maxPrice = $_SESSION['filterArr']['maxPrice'];
+    $minCount = $_SESSION['filterArr']['minCount'];
+    $maxCount = $_SESSION['filterArr']['maxCount'];
 
 }
 
+if ($pageCounter > 1) {
+    $counter = $offset;
+} else {
+    $counter = 1;
+}
 
 
-
-$counter = 1;
 ?>
 <!doctype html>
 <html lang="en">
@@ -91,20 +124,22 @@ $counter = 1;
     <title>Document</title>
 </head>
 <body>
-    <div class="container">
+<div class="container">
 
     <form action="index.php" method="get">
-        <label for="priceMin">Цена от</label>
+        <label for="minPrice">Цена от</label>
         <input type="number" name="minPrice" min="0" placeholder="Цена от" id="minPrice" value="<?= $minPrice ?>">
-        <label for="priceMax">Цена до</label>
+        <label for="maxPrice">Цена до</label>
         <input type="number" name="maxPrice" min="0" placeholder="Цена до" id="maxPrice" value="<?= $maxPrice ?>">
         <br>
-        <label for="countMin">Количество от</label>
+
+        <label for="minCount">Количество от</label>
         <input type="number" name="minCount" min="0" placeholder="Количество от" id="minCount" value="<?= $minCount ?>">
-        <label for="countMax">Количество до</label>
+
+        <label for="maxCount">Количество до</label>
         <input type="number" name="maxCount" min="0" placeholder="Количество до" id="maxCount" value="<?= $maxCount ?>">
         <br> <br>
-        <input type="hidden" name="isFilter" value="<?= $isFilter ?>">
+        <input type="hidden" name="isFilter" value="<?= 1 ?>">
         <button type="submit" class="btn btn-success">Применить фильтр</button>
     </form>
     <br>
@@ -123,45 +158,76 @@ $counter = 1;
                 <th>Цена</th>
             </tr>
 
-            <?php
-
-            foreach ($data as $d) {
-            ?>
-            <tr>
-                <td><?= $counter++ ?></td>
-                <td><?= $d['title'] ?></td>
-                <td><?= $d['unit'] ?></td>
-                <td><?= $d['count'] ?></td>
-                <td><?= $d['price'] ?></td>
-                <td>
-                    <form action="core/delete.php" method="post">
-                        <input type="hidden" name="id" value=<?= $d['id'] ?>>
-                        <button type="submit" class="btn btn-danger">удалить</button>
-                    </form>
-                </td>
-                <td>
-                    <form action="pages/update.php" method="post">
-                        <input type="hidden" name="id" value=<?= $d['id'] ?>>
-                        <button type="submit" class="btn btn-warning">изменить</button>
-                    </form>
-                </td>
-
-            </tr>
-
-
-            <?php
-            }
-            ?>
+            <?php foreach ($data as $d) : ?>
+                <tr>
+                    <td><?= $counter++ ?></td>
+                    <td><?= $d['title'] ?></td>
+                    <td><?= $d['unit'] ?></td>
+                    <td><?= $d['count'] ?></td>
+                    <td><?= $d['price'] ?></td>
+                    <td>
+                        <form action="core/delete.php" method="post">
+                            <input type="hidden" name="id" value=<?= $d['id'] ?>>
+                            <button type="submit" class="btn btn-danger">удалить</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="pages/update.php" method="post">
+                            <input type="hidden" name="id" value=<?= $d['id'] ?>>
+                            <button type="submit" class="btn btn-warning">изменить</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
         </table>
         <div class="control" >
             <form class="control-form" action="index.php" method="get">
-                <input type="hidden" name="back" value="1">
-                <button>Назад</button>
+                <input type="hidden" name="page" value="<?= 1 ?>">
+                <button title="в начало"
+                    <?php if ($pageCounter == 1) : ?>
+                        disabled
+                    <?php endif; ?>
+                ><<</button>
+            </form>
+
+            <form class="control-form" action="index.php" method="get">
+                <?php if ($pageCounter > 1) : ?>
+                    <input type="hidden" name="page" value="<?= $pageCounter - 1 ?>">
+                    <button title="предыущая страница"><</button>
+                <?php endif; ?>
+            </form>
+            <?php if ($pageCounter > 1) : ?>
+            <form action="index.php" method="get">
+                <input type="hidden" name="page" value="<?= $pageCounter -1?>">
+                <button><?= $pageCounter -1?></button>
+            </form>
+            <?php endif; ?>
+            <form action="index.php" method="get">
+                <input type="hidden" name="page" value="<?= $pageCounter?>">
+                <button disabled><?= $pageCounter?></button>
+            </form>
+            <?php if ($pageCounter < $pageAmount  ) : ?>
+            <form action="index.php" method="get">
+                <input type="hidden" name="page" value="<?= $pageCounter +1?>">
+                <button ><?= $pageCounter + 1?></button>
+            </form>
+            <?php endif;?>
+
+            <form class="control-form" action="index.php" method="get">
+
+                    <input type="hidden" name="page" value="<?= $pageCounter +1; ?>">
+                    <button title="следующая страница"
+                        <?php if ($pageCounter == $pageAmount) : ?>
+                            disabled
+                        <?php endif; ?>
+                    > > </button>
+
             </form>
             <form class="control-form" action="index.php" method="get">
-                <input type="hidden" name="forward" value="1">
-                <button>Вперед</button>
+                <input type="hidden" name="page" value="<?= $pageAmount ?>">
+                <button title="последняя страница">>></button>
             </form>
+
         </div>
         <hr>
         <form action="core/add.php" method="post" >
@@ -176,7 +242,7 @@ $counter = 1;
             <button type="submit" class="btn btn-success">добавить</button>
         </form>
     </div>
-    <?= var_dump($isFilter)?>
-    <?= var_dump($_GET['isFilter'])?>
+
 </body>
+<?= var_dump($pageCounter) ?>
 </html>
